@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 from scipy import stats
 
-def san(n1, n2, x1, x2, alpha):
+def san(n1, n2, x1, x2, alpha, test_type):
     p1 = x1 / n1
     p2 = x2 / n2
 
@@ -10,10 +10,15 @@ def san(n1, n2, x1, x2, alpha):
     se = np.sqrt((phat * (1 - phat)) * (1/n1 + 1/n2))
 
     zcal = (p1 - p2) / se
-    z_critical = stats.norm.ppf(1 - alpha)
-    p_value = stats.norm.cdf(zcal)
 
-    return zcal, p_value, z_critical, se, (p1 - p2)
+    if test_type == "less":
+        p_value = stats.norm.cdf(zcal)
+    elif test_type == "greater":
+        p_value = 1 - stats.norm.cdf(zcal)
+    elif test_type == "two-sided":
+        p_value = 2 * (1 - stats.norm.cdf(abs(zcal)))
+
+    return zcal, p_value, se, (p1 - p2)
 
 # UI
 st.title("Two Proportion Z-Test Calculator")
@@ -28,17 +33,20 @@ x2 = st.number_input("Successes in Sample 2", min_value=0, value=205)
 
 alpha = st.number_input("Significance Level (alpha)", min_value=0.001, max_value=0.1, value=0.01)
 
+test_type = st.selectbox(
+    "Alternative Hypothesis",
+    ["less", "greater", "two-sided"]
+)
+
 if st.button("Calculate"):
     if x1 > n1 or x2 > n2:
         st.error("Successes cannot be greater than sample size")
     else:
-        zcal, p_value, zcrit, se, diff = san(n1, n2, x1, x2, alpha)
+        zcal, p_value, se, diff = san(n1, n2, x1, x2, alpha, test_type)
 
         st.subheader("Results")
         st.write("Z calculated:", zcal)
         st.write("P-value:", p_value)
-        st.write("Z critical (+):", zcrit)
-        st.write("Z critical (-):", -zcrit)
         st.write("Standard Error:", se)
         st.write("Difference (p1 - p2):", diff)
 
